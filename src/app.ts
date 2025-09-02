@@ -25,12 +25,14 @@
 
 import { ONVIFService } from './services/onvif.service';
 import { EventService, ProcessedEvent } from './services/event.service';
+import { AlertService } from './services/alert.service';
 import { Logger } from './utils/logger';
 import { AppConfig } from './config/camera.config';
 
 export class ONVIFApp {
   private onvifService: ONVIFService;
   private eventService: EventService;
+  private alertService: AlertService | null = null;
   private logger: Logger;
   private config: AppConfig;
   private isRunning = false;
@@ -39,12 +41,13 @@ export class ONVIFApp {
     this.config = config;
     this.logger = new Logger(config.logging);
     
-    // Initialize services
+    // Initialize core services
     this.onvifService = new ONVIFService({
       ...config.camera,
       logger: this.logger,
     });
     
+    // EventService only handles events, no alerts
     this.eventService = new EventService(this.onvifService, {
       method: config.events.method,
       polling: config.events.polling,
@@ -52,7 +55,16 @@ export class ONVIFApp {
       logger: this.logger,
     });
 
-    // Setup event handlers
+    // App manages AlertService independently
+    if (config.alerts.enabled) {
+      this.alertService = new AlertService({
+        ...config.alerts,
+        logger: this.logger,
+      });
+      this.logger.info('🔔 Alert service initialized');
+    }
+
+    // App orchestrates the interaction between services
     this.setupEventHandlers();
   }
 
@@ -211,19 +223,22 @@ export class ONVIFApp {
   }
 
   /**
-   * Setup event handlers
+   * Setup event handlers and orchestration
    */
   private setupEventHandlers(): void {
-    // Handle all events
+    // Handle all events for logging and orchestration
     this.eventService.onAnyEvent((event: ProcessedEvent) => {
       this.logger.info(`🔔 Event received: ${event.type}`, {
         topic: event.topic,
         source: event.source,
         timestamp: event.timestamp.toISOString(),
       });
+
+      // App orchestrates what to do with events
+      this.handleEvent(event);
     });
 
-    // Handle motion detection events
+    // Specific event handlers for enhanced logging
     this.eventService.onMotionDetection((event: ProcessedEvent) => {
       this.logger.info('🚶 Motion detected!', {
         source: event.source,
@@ -231,7 +246,6 @@ export class ONVIFApp {
       });
     });
 
-    // Handle people detection events
     this.eventService.onPeopleDetection((event: ProcessedEvent) => {
       this.logger.info('👤 People detected!', {
         source: event.source,
@@ -240,7 +254,6 @@ export class ONVIFApp {
       });
     });
 
-    // Handle object detection events (may include people)
     this.eventService.onObjectDetection((event: ProcessedEvent) => {
       this.logger.info('🎯 Object detected!', {
         source: event.source,
@@ -249,7 +262,6 @@ export class ONVIFApp {
       });
     });
 
-    // Handle tampering events
     this.eventService.onTamperingDetection((event: ProcessedEvent) => {
       this.logger.warning('⚠️ Tampering detected!', {
         source: event.source,
@@ -257,7 +269,6 @@ export class ONVIFApp {
       });
     });
 
-    // Handle device events
     this.eventService.onDeviceEvent((event: ProcessedEvent) => {
       this.logger.info('🔧 Device event:', {
         type: event.type,
@@ -266,10 +277,30 @@ export class ONVIFApp {
       });
     });
 
-    // Handle errors
     this.eventService.onError((error: Error) => {
       this.logger.error('Event service error:', error);
     });
+  }
+
+  /**
+   * Handle event orchestration - decides what to do with each event
+   */
+  private async handleEvent(event: ProcessedEvent): Promise<void> {
+    // Send alerts if alert service is configured and enabled
+    if (this.alertService && this.alertService.isAlertEnabled()) {
+      try {
+        const deviceInfo = await this.onvifService.getDeviceInformation().catch(() => null);
+        await this.alertService.sendAlert(event, deviceInfo);
+      } catch (error) {
+        this.logger.error('Failed to send alert', error);
+      }
+    }
+
+    // Future: Add other event processors here
+    // - Database logging: await this.databaseService?.saveEvent(event);
+    // - Analytics processing: await this.analyticsService?.processEvent(event);
+    // - Email notifications: await this.emailService?.sendNotification(event);
+    // - Custom webhooks: await this.webhookService?.processEvent(event);
   }
 
   /**
@@ -284,6 +315,73 @@ export class ONVIFApp {
     } catch (error) {
       this.logger.error('Error during graceful shutdown', error);
       process.exit(1);
+    }
+  }
+
+  /**
+   * Alert Management Methods
+   */
+
+  /**
+   * Enable alert notifications
+   */
+  enableAlerts(): void {
+    if (this.alertService) {
+      this.alertService.enable();
+    } else {
+      this.logger.warning('Alert service not configured');
+    }
+  }
+
+  /**
+   * Disable alert notifications
+   */
+  disableAlerts(): void {
+    if (this.alertService) {
+      this.alertService.disable();
+    } else {
+      this.logger.warning('Alert service not configured');
+    }
+  }
+
+  /**
+   * Check if alerts are enabled
+   */
+  areAlertsEnabled(): boolean {
+    return this.alertService?.isAlertEnabled() ?? false;
+  }
+
+  /**
+   * Get alert statistics
+   */
+  getAlertStats(): { enabled: boolean; alertCount: number; webhookUrl: string } | null {
+    return this.alertService?.getStats() ?? null;
+  }
+
+  /**
+   * Test webhook connectivity
+   */
+  async testAlertWebhook(): Promise<boolean> {
+    if (!this.alertService) {
+      this.logger.warning('Alert service not configured');
+      return false;
+    }
+
+    this.logger.info('🧪 Testing alert webhook...');
+    
+    try {
+      const result = await this.alertService.testWebhook();
+      
+      if (result) {
+        this.logger.success('✅ Alert webhook test successful');
+      } else {
+        this.logger.error('❌ Alert webhook test failed');
+      }
+      
+      return result;
+    } catch (error) {
+      this.logger.error('Webhook test failed', error);
+      return false;
     }
   }
 }

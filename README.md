@@ -1,258 +1,132 @@
-# ONVIF AI - Advanced IP Camera Connection
+# ONVIF AI - IP Camera Integration with AI Event Detection
 
-A professional Node.js TypeScript application for connecting to ONVIF-compatible IP cameras with promise-based API, event handling, and comprehensive logging.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 
-## Features
+A professional Node.js TypeScript application for integrating with ONVIF-compliant IP cameras, featuring AI-powered event detection, real-time notifications, and webhook alerts.
 
-- 🎥 **Promise-based ONVIF API** - Clean async/await syntax using util.promisify
-- 📋 **Device Information** - Get manufacturer, model, firmware details
-- 📺 **RTSP Stream URLs** - Retrieve video stream endpoints
-- 🔔 **Dual Event Methods** - Both polling and push-based event handling with toggle support
-- 📊 **Professional Logging** - Structured logging with timestamps
-- ⚙️ **Configuration Management** - Environment variable support
-- 🏗️ **Modular Architecture** - Clean separation of concerns
-- 🔧 **TypeScript Support** - Full type safety and IntelliSense
-- 🛡️ **Error Handling** - Robust error handling and validation
-- 🎛️ **Graceful Shutdown** - Clean application termination
-- 🌐 **HTTP Event Server** - Mini HTTP server for ONVIF event push notifications
-- ⚡ **High Performance** - No polling, events pushed directly from camera
+## 🚀 Features
 
-## Architecture
+- **📹 ONVIF Camera Integration** - Connect to any ONVIF-compliant IP camera
+- **🤖 AI Event Detection** - Motion, people, object, and tampering detection
+- **⚡ Real-time Events** - Push notifications and polling modes
+- **🚨 Smart Alerting** - Webhook notifications with throttling and debouncing
+- **🔧 TypeScript** - Full type safety and modern development experience
+- **📊 Comprehensive Logging** - Detailed event and error logging
+- **🛡️ Error Handling** - Robust error handling and retry logic
 
-```
-src/
-├── app.ts                 # Main application orchestrator
-├── index.ts              # Application entry point
-├── config/
-│   └── camera.config.ts  # Configuration management
-├── services/
-│   ├── onvif.service.ts  # Promise-based ONVIF wrapper
-│   └── event.service.ts  # Event handling and processing
-├── utils/
-│   └── logger.ts         # Structured logging utility
-├── types/
-│   └── onvif.d.ts       # TypeScript declarations
-└── examples/
-    └── basic-usage.ts   # Usage examples
+## 📋 Requirements
+
+- **Node.js** 18.0 or higher
+- **TypeScript** 5.0 or higher  
+- **ONVIF-compliant IP Camera**
+- **Network access** to camera and webhook endpoints
+
+## 🛠️ Installation
+
+### Clone Repository
+
+```bash
+git clone https://github.com/rishabhrpg/onvif-ai.git
+cd onvif-ai
 ```
 
-## Prerequisites
+### Install Dependencies
 
-- Node.js (v16 or higher)
-- An ONVIF-compatible IP camera on your network
-- Camera credentials (username/password)
+```bash
+npm install
+```
 
-## Quick Start
+### Environment Setup
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+Copy the example environment file and configure your settings:
 
-2. **Configure your camera:**
-   ```bash
-   # Copy the example environment file
-   cp .env.example .env
-   
-   # Edit .env with your camera settings
-   nano .env
-   ```
-   
-   Update the `.env` file with your camera details:
-   ```env
-   # ONVIF Camera Configuration
-   CAMERA_HOST=192.168.1.100
-   CAMERA_PORT=2020
-   CAMERA_USERNAME=admin
-   CAMERA_PASSWORD=your_password
-   CAMERA_TIMEOUT=10000
+```bash
+cp .env.example .env
+```
 
-   # Event Configuration
-   EVENTS_ENABLED=true
-   EVENT_METHOD=push
+Edit `.env` with your camera and webhook settings:
 
-   # Polling Configuration (for EVENT_METHOD=polling)
-   POLLING_PULL_INTERVAL=5000
-   POLLING_MESSAGE_LIMIT=10
-   POLLING_TIMEOUT=PT10S
-   POLLING_RETRY_ON_ERROR=true
-   POLLING_MAX_RETRIES=3
-
-   # Push Configuration (for EVENT_METHOD=push)
-   PUSH_HTTP_PORT=3001
-   PUSH_HTTP_HOST=192.168.1.100
-   PUSH_HTTP_ENDPOINT=/events
-
-   # Logging Configuration
-   LOG_LEVEL=info
-   LOG_ENABLE_TIMESTAMPS=true
-   ```
-
-3. **Run in development mode:**
-   ```bash
-   npm run dev
-   ```
-
-4. **Build and run production:**
-   ```bash
-   npm run build
-   npm start
-   ```
-
-## Scripts
-
-- `npm run dev` - Run with ts-node for development
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm start` - Run the compiled JavaScript
-- `npm run clean` - Remove the dist directory
-
-## Configuration
-
-### Environment Variables (.env file)
-
-All configuration is now managed through a `.env` file in the project root. Copy `.env.example` to `.env` and customize:
-
-```env
+```bash
 # ONVIF Camera Configuration
 CAMERA_HOST=192.168.1.100
-CAMERA_PORT=2020
+CAMERA_PORT=80
 CAMERA_USERNAME=admin
 CAMERA_PASSWORD=your_password
-CAMERA_TIMEOUT=10000
 
-# Event Configuration
-EVENTS_ENABLED=true
-EVENT_METHOD=push
-
-# Polling Configuration (for EVENT_METHOD=polling)
-POLLING_PULL_INTERVAL=5000
-POLLING_MESSAGE_LIMIT=10
-POLLING_TIMEOUT=PT10S
-POLLING_RETRY_ON_ERROR=true
-POLLING_MAX_RETRIES=3
-
-# Push Configuration (for EVENT_METHOD=push)
-PUSH_HTTP_PORT=3001
-PUSH_HTTP_HOST=192.168.1.100
-PUSH_HTTP_ENDPOINT=/events
-
-# Logging Configuration
-LOG_LEVEL=info
-LOG_ENABLE_TIMESTAMPS=true
+# Alert Configuration  
+ALERTS_ENABLED=true
+ALERTS_WEBHOOK_URL=https://your-webhook-endpoint.com/alerts
 ```
 
-You can still override any setting using command-line environment variables:
+### Build and Run
+
 ```bash
-EVENT_METHOD=polling npm run dev
+# Build the application
+npm run build
+
+# Run the application
+npm start
+
+# Or run in development mode
+npm run dev
 ```
 
-### Configuration Options
+## 🎯 Quick Start
 
-```typescript
-interface AppConfig {
-  camera: {
-    hostname: string;    // Camera IP address
-    username: string;    // Camera username
-    password: string;    // Camera password
-    port: number;        // Camera port (usually 80 or 8080)
-    timeout?: number;    // Connection timeout in ms
-  };
-  events: {
-    enabled: boolean;     // Enable/disable event monitoring
-    method: 'polling' | 'push'; // Event method selection
-    polling: {
-      pullInterval: number; // Polling interval in ms
-      messageLimit: number; // Max events per poll
-      timeout: string;      // Event timeout (ISO 8601 format)
-      retryOnError: boolean;// Retry on errors
-      maxRetries: number;   // Maximum retry attempts
-    };
-    push: {
-      httpServer: {
-        port: number;       // HTTP server port for notifications
-        host: string;       // Host to bind server to
-        endpoint: string;   // Endpoint path for receiving events
-      };
-    };
-  };
-  logging: {
-    level: 'debug' | 'info' | 'warn' | 'error'; // Log level
-    enableTimestamps: boolean;                   // Include timestamps
-  };
-}
-```
-
-## Usage Examples
-
-### Basic Usage
-
-```typescript
+```javascript
 import { ONVIFApp } from './src/app';
 import { loadConfig } from './src/config/camera.config';
 
-const config = loadConfig();
-const app = new ONVIFApp(config);
+async function main() {
+  // Load configuration from environment variables
+  const config = loadConfig();
+  
+  // Create and start the application
+  const app = new ONVIFApp(config);
+  await app.start();
+  
+  // The app will now:
+  // 1. Connect to your ONVIF camera
+  // 2. Start monitoring for events
+  // 3. Send webhook alerts when events occur
+}
 
-await app.start();
+main().catch(console.error);
 ```
 
-### Advanced Usage
+## 📖 Configuration
 
-```typescript
-import { ONVIFService } from './src/services/onvif.service';
-import { EventService } from './src/services/event.service';
-import { Logger } from './src/utils/logger';
+### Camera Settings
 
-// Create logger
-const logger = new Logger({ level: 'info', enableTimestamps: true });
+```bash
+# ONVIF Camera Configuration
+CAMERA_HOST=192.168.1.100          # Camera IP address
+CAMERA_PORT=80                     # ONVIF port (usually 80, 8080, or 554)
+CAMERA_USERNAME=admin              # Camera username
+CAMERA_PASSWORD=password123        # Camera password
+CAMERA_TIMEOUT=30000              # Connection timeout in milliseconds
+```
 
-// Create ONVIF service
-const onvifService = new ONVIFService({
-  hostname: '192.168.1.100',
-  username: 'admin',
-  password: 'password',
-  port: 80,
-  logger
-});
+### Event Monitoring
 
-// Connect to camera
-await onvifService.connect();
+```bash
+# Event Configuration
+EVENTS_ENABLED=true               # Enable/disable event monitoring
+EVENT_METHOD=push                 # 'push' or 'polling'
 
-// Get device information
-const deviceInfo = await onvifService.getDeviceInformation();
-console.log('Device:', deviceInfo);
+# Push Method (Real-time)
+PUSH_HTTP_PORT=3001              # Port for receiving push notifications
+PUSH_HTTP_HOST=192.168.1.100     # Host address for push server
+PUSH_HTTP_ENDPOINT=/events       # Endpoint path for events
 
-// Get stream URI
-const stream = await onvifService.getStreamUri();
-console.log('Stream URL:', stream.uri);
-
-    // Setup event handling
-    const eventService = new EventService(onvifService, {
-      method: 'polling', // or 'push'
-      polling: {
-        pullInterval: 5000,
-        messageLimit: 10,
-        timeout: 'PT10S',
-        retryOnError: true,
-        maxRetries: 3,
-      },
-      push: {
-        httpServer: {
-          port: 3001,
-          host: '0.0.0.0',
-          endpoint: '/onvif/events',
-        },
-      },
-      logger
-    });
-
-// Handle motion events
-eventService.onMotionDetection((event) => {
-  console.log('Motion detected!', event.timestamp);
-});
-
-// Start event monitoring
-await eventService.start();
+# Polling Method (Fallback)
+POLLING_PULL_INTERVAL=5000       # Polling interval in milliseconds
+POLLING_MESSAGE_LIMIT=10         # Max messages per poll
+POLLING_TIMEOUT=PT10S            # Polling timeout (ISO 8601 duration)
+POLLING_RETRY_ON_ERROR=true      # Retry on polling errors
+POLLING_MAX_RETRIES=3            # Max retry attempts
 ```
 
 ## Event Methods
@@ -290,10 +164,178 @@ EVENT_METHOD=push npm run dev
 The application can handle various ONVIF events:
 
 - **Motion Detection** - `motionalarm`
+- **People Detection** - `peopledetection` 
+- **Object Detection** - `objectdetection`
 - **Tampering Detection** - `tamper`
 - **Device Events** - `device`
 - **Recording Events** - `recording`
 - **Custom Events** - Based on camera capabilities
+
+## 🚨 Alert Module
+
+The Alert Module provides webhook-based notifications for camera events. When enabled, it automatically sends HTTP POST requests to your configured webhook URL whenever events are detected.
+
+### Features
+
+- **Webhook Notifications**: HTTP POST requests to your endpoint
+- **Event Filtering**: Automatic severity classification
+- **Retry Logic**: Configurable retry attempts with delays
+- **Enable/Disable**: Runtime control of alert functionality
+- **Rich Payloads**: Detailed event information and camera context
+- **🎛️ Smart Throttling**: Prevent alert spam with configurable throttling
+
+### Configuration
+
+Add these environment variables to your `.env` file:
+
+```bash
+# Alert Configuration
+ALERTS_ENABLED=true
+ALERTS_WEBHOOK_URL=https://your-webhook-endpoint.com/alerts
+ALERTS_TIMEOUT=5000
+ALERTS_RETRY_ATTEMPTS=3
+ALERTS_RETRY_DELAY=1000
+
+# Alert Throttling Configuration
+ALERTS_THROTTLING_ENABLED=true
+ALERTS_THROTTLING_WINDOW_MS=60000
+ALERTS_THROTTLING_MAX_PER_WINDOW=5
+ALERTS_THROTTLING_DEBOUNCE_MS=5000
+```
+
+### 🎛️ Alert Throttling
+
+Alert throttling prevents webhook spam by implementing two mechanisms:
+
+#### **Rate Limiting**
+- **Window-based**: Limits alerts per time window (e.g., max 5 alerts per minute)
+- **Per Event Type**: Each event type (motion, people, etc.) has its own limit
+- **Automatic Reset**: Counters reset when the time window expires
+
+#### **Debouncing**
+- **Minimum Interval**: Enforces minimum time between alerts of the same type
+- **Spam Prevention**: Prevents rapid-fire alerts from the same event
+- **Smart Timing**: Uses configurable debounce period
+
+### Throttling Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `ALERTS_THROTTLING_ENABLED` | `true` | Enable/disable throttling |
+| `ALERTS_THROTTLING_WINDOW_MS` | `60000` | Time window for rate limiting (1 minute) |
+| `ALERTS_THROTTLING_MAX_PER_WINDOW` | `5` | Max alerts per window per event type |
+| `ALERTS_THROTTLING_DEBOUNCE_MS` | `5000` | Minimum time between same-type alerts (5 seconds) |
+
+### Throttling Examples
+
+```bash
+# Conservative: Reduce alert frequency
+ALERTS_THROTTLING_WINDOW_MS=300000      # 5 minute window
+ALERTS_THROTTLING_MAX_PER_WINDOW=3      # Max 3 alerts per 5 minutes
+ALERTS_THROTTLING_DEBOUNCE_MS=10000     # 10 second debounce
+
+# Aggressive: Allow more alerts
+ALERTS_THROTTLING_WINDOW_MS=30000       # 30 second window  
+ALERTS_THROTTLING_MAX_PER_WINDOW=10     # Max 10 alerts per 30 seconds
+ALERTS_THROTTLING_DEBOUNCE_MS=2000      # 2 second debounce
+
+# Disabled: No throttling (not recommended)
+ALERTS_THROTTLING_ENABLED=false
+```
+
+### Webhook Payload
+
+When an event is detected, the following JSON payload is sent to your webhook:
+
+```json
+{
+  "eventId": "evt_1704067200000_abc123",
+  "eventType": "peopledetection",
+  "timestamp": "2025-01-01T12:00:00.000Z",
+  "topic": "tns1:VideoAnalytics/PeopleDetection",
+  "source": "{\"VideoSourceConfigurationToken\":\"1\"}",
+  "data": {
+    "State": "true",
+    "Confidence": "0.95"
+  },
+  "cameraInfo": {
+    "hostname": "192.168.1.100",
+    "model": "DS-2CD2143G0-IS",
+    "manufacturer": "Hikvision"
+  },
+  "severity": "high",
+  "message": "👤 Person detected at 1/1/2025, 12:00:00 PM"
+}
+```
+
+### Severity Levels
+
+| Event Type | Severity | Description |
+|------------|----------|-------------|
+| `peopledetection` | `high` | Person detected by AI |
+| `tamper` | `critical` | Camera tampering detected |
+| `motionalarm` | `medium` | Motion detected |
+| `objectdetection` | `medium` | Object detected by AI |
+| `device` | `low` | Device status events |
+
+### Usage Examples
+
+```javascript
+// Enable/disable alerts at runtime
+app.enableAlerts();
+app.disableAlerts();
+
+// Check alert status
+const isEnabled = app.areAlertsEnabled();
+console.log('Alerts enabled:', isEnabled);
+
+// Get alert statistics (includes throttling info)
+const stats = app.getAlertStats();
+console.log('Alert stats:', stats);
+// Output: { 
+//   enabled: true, 
+//   alertCount: 15, 
+//   webhookUrl: "https://***",
+//   throttling: {
+//     enabled: true,
+//     windowMs: 60000,
+//     maxAlertsPerWindow: 5,
+//     debounceMs: 5000,
+//     eventTypes: {
+//       "peopledetection": { count: 2, windowRemainingMs: 45000, ... }
+//     }
+//   }
+// }
+
+// Test webhook connectivity
+const testResult = await app.testAlertWebhook();
+console.log('Webhook test:', testResult ? 'PASSED' : 'FAILED');
+```
+
+### Webhook Examples
+
+#### Discord Webhook
+```bash
+ALERTS_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_TOKEN
+```
+
+#### Slack Webhook
+```bash
+ALERTS_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+```
+
+#### Custom API Endpoint
+```bash
+ALERTS_WEBHOOK_URL=https://api.yourdomain.com/camera-alerts
+```
+
+### Error Handling
+
+- **Connection Timeouts**: Configurable timeout (default: 5 seconds)
+- **Retry Logic**: Automatic retries with exponential backoff
+- **Graceful Failures**: Alerts failures don't affect event monitoring
+- **Detailed Logging**: All webhook attempts are logged
+- **Throttle Logging**: Throttled alerts are logged for debugging
 
 ## API Reference
 
@@ -312,91 +354,157 @@ The application can handle various ONVIF events:
 - `start()` - Start event monitoring
 - `stop()` - Stop event monitoring
 - `onMotionDetection(handler)` - Handle motion events
+- `onPeopleDetection(handler)` - Handle people detection events
+- `onObjectDetection(handler)` - Handle object detection events
 - `onTamperingDetection(handler)` - Handle tampering events
 - `onAnyEvent(handler)` - Handle all events
+- `getStatus()` - Get service status
 
-## Finding Your Camera
+### ONVIFApp
 
-To find ONVIF cameras on your network:
+- `start()` - Start the application
+- `stop()` - Stop the application
+- `enableAlerts()` - Enable alert notifications
+- `disableAlerts()` - Disable alert notifications
+- `areAlertsEnabled()` - Check if alerts are enabled
+- `getAlertStats()` - Get alert statistics with throttling info
+- `testAlertWebhook()` - Test webhook connectivity
+- `getStatus()` - Get application status
 
-1. **ONVIF Device Manager** (Windows)
-2. **IP Camera Scanner apps** (Mobile)
-3. **Network scanning tools** (nmap, etc.)
-4. **Router admin panel** (check connected devices)
+## 🔧 Advanced Usage
 
-Common camera settings:
-- Port 80 or 8080 for HTTP
-- Port 554 for RTSP streams
-- Default credentials: admin/admin, admin/password
+### Custom Event Handlers
 
-## Troubleshooting
+```javascript
+import { ONVIFApp } from './src/app';
+import { loadConfig } from './src/config/camera.config';
+
+const config = loadConfig();
+const app = new ONVIFApp(config);
+
+// Get event service for custom handlers
+const eventService = app.getEventService();
+
+// Handle specific event types
+eventService.onPeopleDetection((event) => {
+  console.log('👤 Person detected:', {
+    timestamp: event.timestamp,
+    confidence: event.data.Confidence,
+    location: event.source
+  });
+});
+
+eventService.onMotionDetection((event) => {
+  console.log('🚶 Motion detected:', event);
+});
+
+// Handle all events
+eventService.onAnyEvent((event) => {
+  console.log('📡 Event:', event.type, event.timestamp);
+});
+
+await app.start();
+```
+
+### Advanced ONVIF Operations
+
+```javascript
+// Get ONVIF service for advanced operations
+const onvifService = app.getONVIFService();
+
+// Get device information
+const deviceInfo = await onvifService.getDeviceInformation();
+console.log('Camera:', deviceInfo.manufacturer, deviceInfo.model);
+
+// Get stream URI
+const stream = await onvifService.getStreamUri();
+console.log('RTSP Stream:', stream.uri);
+
+// Get camera capabilities
+const capabilities = await onvifService.getCapabilities();
+console.log('Supports Analytics:', capabilities.analytics);
+```
+
+## 🚨 Troubleshooting
 
 ### Connection Issues
-- Ensure camera supports ONVIF protocol
-- Verify IP address, port, and credentials
-- Check network connectivity
-- Some cameras require enabling ONVIF in settings
+
+1. **Verify camera IP and port**
+   ```bash
+   ping 192.168.1.100
+   telnet 192.168.1.100 80
+   ```
+
+2. **Check ONVIF support**
+   - Access camera web interface
+   - Look for ONVIF settings
+   - Ensure ONVIF is enabled
+
+3. **Test credentials**
+   - Use ONVIF Device Manager
+   - Verify username/password work
 
 ### Event Issues
-- Not all cameras support ONVIF events
-- Some cameras have limited event types
-- **Polling method**: May get connection resets (normal behavior)
-- **Push method**: Camera must be able to reach your server's IP address
-- **Push method**: Ensure the HTTP server port is accessible to the camera
 
-### Performance
-- **Polling**: Reliable but with regular polling overhead
-- **Push**: Zero polling overhead, real-time notifications
-- **Push**: HTTP server handles multiple concurrent event notifications
-- Use appropriate log levels in production
-- Choose method based on your camera's ONVIF support level
+1. **No events received**
+   - Check camera event configuration
+   - Verify event types are enabled
+   - Test with polling mode first
 
-## Security Considerations
+2. **Push notifications not working**
+   - Ensure port is accessible
+   - Check firewall settings
+   - Verify camera can reach n8n server
 
-- Change default camera passwords
-- Use strong authentication credentials
-- Consider network segmentation for cameras
-- Keep camera firmware updated
-- Monitor for unauthorized access
+3. **Too many alerts (Alert Spam)**
+   - Enable throttling: `ALERTS_THROTTLING_ENABLED=true`
+   - Adjust window: `ALERTS_THROTTLING_WINDOW_MS=60000`
+   - Reduce max alerts: `ALERTS_THROTTLING_MAX_PER_WINDOW=3`
+   - Increase debounce: `ALERTS_THROTTLING_DEBOUNCE_MS=10000`
 
-## Recent Improvements
+### Performance Issues
 
-### ✅ Version 2.0 Updates
+1. **High CPU usage**
+   - Increase polling interval
+   - Reduce event types monitored
+   - Use push mode instead of polling
 
-- **🔄 Promise-based API**: Converted from callback-based to clean async/await syntax using `util.promisify`
-- **🌐 Dual Event Methods**: Support for both polling and push-based event handling
-- **🔀 Method Toggle**: Easy switching between polling and push methods via configuration
-- **📡 HTTP Event Server**: Mini HTTP server for push notifications
-- **🔁 Robust Polling**: Pull-point subscriptions with retry logic and auto-recovery
-- **🧹 Code Cleanup**: Removed callback clutter and simplified codebase significantly
-- **🔧 Better Error Handling**: Improved type safety and error validation
-- **⚙️ Flexible Config**: Environment variable support for method selection
+2. **Network congestion**
+   - Optimize polling frequency
+   - Filter unnecessary event types
+   - Enable alert throttling
 
-### Event System Architecture
+## 🏗️ Architecture
 
-**Polling Method (Default):**
 ```
-Your App → Pull-Point Subscription → Camera
-Your App ← Poll for Events (5s interval) ← Camera
-```
-
-**Push Method:**
-```
-Camera → HTTP POST → Your HTTP Server → Event Processing → Event Handlers
-                     (localhost:3001)
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   ONVIF Camera  │───▶│  ONVIF Service  │───▶│  Event Service  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Webhook API   │◀───│  Alert Service  │◀───│   ONVIF App     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### Method Comparison
+## 🚀 Extending the Application
 
-| Feature | Polling | Push |
-|---------|---------|------|
-| **Compatibility** | ✅ Most cameras | ⚠️ Full ONVIF support needed |
-| **Performance** | ⚠️ Regular polling overhead | ✅ Zero polling, real-time |
-| **Reliability** | ✅ Works with connection resets | ⚠️ Requires network accessibility |
-| **Setup** | ✅ Simple, works out of the box | ⚠️ Firewall/network configuration |
-| **Use Case** | Basic ONVIF cameras | Advanced ONVIF cameras |
+The modular architecture makes it easy to extend functionality:
 
-## Next Steps
+```javascript
+// Add custom event processors in app.ts
+private async handleEvent(event: ProcessedEvent): Promise<void> {
+  // Send alerts
+  if (this.alertService?.isAlertEnabled()) {
+    await this.alertService.sendAlert(event, deviceInfo);
+  }
+  
+  // Add your custom processors
+  await this.databaseService?.saveEvent(event);
+  await this.analyticsService?.processEvent(event);
+  await this.emailService?.sendNotification(event);
+}
+```
 
 Extend this foundation to:
 - **AI Integration** - Add computer vision processing on RTSP streams

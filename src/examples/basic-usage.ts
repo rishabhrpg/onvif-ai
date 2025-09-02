@@ -81,6 +81,20 @@ async function basicExample(): Promise<void> {
     const stream = await onvifService.getStreamUri();
     console.log('Stream URL:', stream.uri);
 
+    // Example: Alert management
+    console.log('Alert status:', app.areAlertsEnabled());
+    
+    // Test webhook (if alerts are enabled)
+    if (app.areAlertsEnabled()) {
+      console.log('Testing webhook...');
+      const webhookTest = await app.testAlertWebhook();
+      console.log('Webhook test result:', webhookTest ? 'PASSED' : 'FAILED');
+      
+      // Get alert statistics
+      const alertStats = app.getAlertStats();
+      console.log('Alert statistics:', alertStats);
+    }
+
     // Keep running for 1 minute, then stop
     setTimeout(async () => {
       console.log('Stopping application...');

@@ -1,5 +1,3 @@
-import 'dotenv/config';
-
 /**
  * ONVIF AI - Camera Configuration
  * 
@@ -24,6 +22,8 @@ import 'dotenv/config';
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+import 'dotenv/config';
 
 export interface CameraConfig {
   hostname: string;
@@ -53,6 +53,19 @@ export interface AppConfig {
       };
     };
   };
+  alerts: {
+    enabled: boolean;
+    webhookUrl: string;
+    timeout: number;
+    retryAttempts: number;
+    retryDelay: number;
+    throttling: {
+      enabled: boolean;
+      windowMs: number;
+      maxAlertsPerWindow: number;
+      debounceMs: number;
+    };
+  };
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';
     enableTimestamps: boolean;
@@ -64,18 +77,21 @@ function getEnvVar(key: string, fallback: string): string {
   return process.env[key] || fallback;
 }
 
+// Helper function to get environment number with fallback
 function getEnvNumber(key: string, fallback: number): number {
   const value = process.env[key];
   return value ? parseInt(value, 10) : fallback;
 }
 
+// Helper function to get environment boolean with fallback
 function getEnvBoolean(key: string, fallback: boolean): boolean {
   const value = process.env[key];
-  return value ? value.toLowerCase() === 'true' : fallback;
+  if (value === undefined) return fallback;
+  return value.toLowerCase() === 'true';
 }
 
-// Default configuration loaded from environment variables
-export const defaultConfig: AppConfig = {
+// Default configuration with environment variable overrides
+const defaultConfig: AppConfig = {
   camera: {
     hostname: getEnvVar('CAMERA_HOST', '192.168.1.100'),
     username: getEnvVar('CAMERA_USERNAME', 'admin'),
@@ -99,6 +115,19 @@ export const defaultConfig: AppConfig = {
         host: getEnvVar('PUSH_HTTP_HOST', '192.168.1.100'),
         endpoint: getEnvVar('PUSH_HTTP_ENDPOINT', '/events'),
       },
+    },
+  },
+  alerts: {
+    enabled: getEnvBoolean('ALERTS_ENABLED', false),
+    webhookUrl: getEnvVar('ALERTS_WEBHOOK_URL', ''),
+    timeout: getEnvNumber('ALERTS_TIMEOUT', 5000),
+    retryAttempts: getEnvNumber('ALERTS_RETRY_ATTEMPTS', 3),
+    retryDelay: getEnvNumber('ALERTS_RETRY_DELAY', 1000),
+    throttling: {
+      enabled: getEnvBoolean('ALERTS_THROTTLING_ENABLED', true),
+      windowMs: getEnvNumber('ALERTS_THROTTLING_WINDOW_MS', 60000), // 1 minute window
+      maxAlertsPerWindow: getEnvNumber('ALERTS_THROTTLING_MAX_PER_WINDOW', 5), // Max 5 alerts per minute
+      debounceMs: getEnvNumber('ALERTS_THROTTLING_DEBOUNCE_MS', 5000), // 5 second debounce
     },
   },
   logging: {

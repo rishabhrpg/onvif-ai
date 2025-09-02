@@ -85,19 +85,18 @@ export class EventService extends EventEmitter {
       return;
     }
 
+    this.isRunning = true;
+    this.logger.info(`🚀 Starting event monitoring using ${this.config.method} method`);
+
     try {
       if (this.config.method === 'push') {
         await this.startPushMethod();
       } else {
         await this.startPollingMethod();
       }
-      
-      this.isRunning = true;
-      this.logger.success(`Event service started with ${this.config.method} method`);
-      
     } catch (error) {
-      this.logger.failure('Failed to start event service', error);
-      await this.cleanup();
+      this.isRunning = false;
+      this.logger.error('Failed to start event monitoring', error);
       throw error;
     }
   }
@@ -137,28 +136,19 @@ export class EventService extends EventEmitter {
     
     // Start polling for events
     this.startEventPolling();
-    
-    this.logger.info('Polling method configured', {
-      interval: this.config.polling.pullInterval,
-      messageLimit: this.config.polling.messageLimit,
-    });
   }
 
   /**
-   * Create pull-point subscription with retry logic
+   * Create pull-point subscription for polling
    */
   private async createPullPointSubscription(): Promise<void> {
     try {
       await this.onvifService.createPullPointSubscription();
       this.subscriptionActive = true;
-      this.retryCount = 0;
+      this.logger.success('Pull-point subscription created successfully');
     } catch (error) {
-      this.subscriptionActive = false;
-      this.logger.warning('Failed to create pull-point subscription - events will be disabled', error);
-      
-      if (!this.config.polling?.retryOnError) {
-        throw error;
-      }
+      this.logger.error('Failed to create pull-point subscription', error);
+      throw error;
     }
   }
 
@@ -169,15 +159,10 @@ export class EventService extends EventEmitter {
     if (!this.config.polling) return;
 
     this.pullTimer = setInterval(async () => {
-      try {
-        await this.pollForEvents();
-      } catch (error) {
-        this.logger.error('Error during event polling', error);
-        this.emit('error', error);
-      }
+      await this.pollForEvents();
     }, this.config.polling.pullInterval);
 
-    this.logger.debug('Event polling started', {
+    this.logger.info('Event polling started', {
       interval: this.config.polling.pullInterval,
       messageLimit: this.config.polling.messageLimit,
     });
@@ -250,27 +235,27 @@ export class EventService extends EventEmitter {
   private processPolledEvent(event: any): ProcessedEvent {
     const eventId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
+    // Extract timestamp
+    const timestamp = event.utcTime ? new Date(event.utcTime) : new Date();
+    
+    // Extract topic
+    const topic = event.topic || 'unknown';
+    
     // Extract event type from topic
-    const eventType = this.extractEventType(event.topic || 'unknown');
+    const eventType = this.extractEventType(topic);
     
     // Extract source information
     const source = this.extractPolledEventSource(event);
 
     const processedEvent: ProcessedEvent = {
       id: eventId,
-      timestamp: new Date(),
-      topic: event.topic || 'unknown',
-      source: source,
+      timestamp,
+      topic,
+      source,
       type: eventType,
-      data: event.data || event.message,
+      data: event.data || {},
       raw: event,
     };
-
-    this.logger.debug('Polled event processed', {
-      id: eventId,
-      type: eventType,
-      topic: event.topic,
-    });
 
     return processedEvent;
   }
@@ -521,8 +506,6 @@ export class EventService extends EventEmitter {
     };
   }
 
-
-
   /**
    * Extract event type from topic string
    */
@@ -560,8 +543,6 @@ export class EventService extends EventEmitter {
     
     return topic.toLowerCase().replace(/[^a-z0-9]/g, '_');
   }
-
-
 
   /**
    * Register event handlers for specific event types
