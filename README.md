@@ -441,7 +441,7 @@ SOFTWARE.
 ## 🙏 Attribution
 
 This project uses the following open source libraries:
-- **node-onvif** - ONVIF camera communication
+- **onvif** - ONVIF camera communication
 - **TypeScript** - Type-safe JavaScript development
 - **Node.js** - JavaScript runtime environment
 
