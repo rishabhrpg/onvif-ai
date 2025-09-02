@@ -1,0 +1,38 @@
+{
+  "name": "onvif-ai",
+  "version": "1.0.0",
+  "description": "Node.js ONVIF IP Camera Connection with TypeScript",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "onvif",
+    "ip-camera",
+    "typescript",
+    "nodejs"
+  ],
+  "author": "Rishabh Gusain <r.gausai@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rishabhrpg/onvif-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rishabhrpg/onvif-ai/issues"
+  },
+  "homepage": "https://github.com/rishabhrpg/onvif-ai#readme",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "nimble": "^0.0.2",
+    "onvif": "^0.6.4"
+  }
+}
