@@ -43,7 +43,7 @@ npm install
 Copy the example environment file and configure your settings:
 
 ```bash
-cp .env.example .env
+cp env.example .env
 ```
 
 Edit `.env` with your camera and webhook settings:

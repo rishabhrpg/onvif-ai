@@ -50,6 +50,62 @@ let flow = require('nimble');
 let http = require('http');
 let server = null;
 
+// Subscription renewal variables
+let subscription = null;
+let renewalTimer = null;
+
+// Function to renew subscription
+function renewSubscription() {
+	if (cam_obj && subscription) {
+		console.log('🔄 Renewing subscription...');
+		cam_obj.renew({}, function(err, data) {
+			if (err) {
+				console.log('❌ Failed to renew subscription:', err.message);
+				// Try to recreate subscription
+				recreateSubscription();
+			} else {
+				console.log('✅ Subscription renewed successfully');
+				// Schedule next renewal in 90 seconds (before 2 minute timeout)
+				scheduleRenewal();
+			}
+		});
+	}
+}
+
+// Function to schedule renewal
+function scheduleRenewal() {
+	if (renewalTimer) {
+		clearTimeout(renewalTimer);
+	}
+	// Renew every 90 seconds (30 seconds before the 2-minute timeout)
+	renewalTimer = setTimeout(renewSubscription, 90000);
+	console.log('⏰ Next renewal scheduled in 90 seconds');
+}
+
+// Function to recreate subscription if renewal fails
+function recreateSubscription() {
+	if (cam_obj) {
+		console.log('🔄 Recreating subscription...');
+		let uniqueID = 1001;
+		let receveUrl = "http://" + EVENT_RECEIVER_IP_ADDRESS + ":" + EVENT_RECEIVER_PORT + "/events/" + uniqueID;
+		
+		cam_obj.subscribe(
+			{
+				url: receveUrl
+			},
+			(err, newSubscription, xml) => {
+				if (err) {
+					console.log('❌ Failed to recreate subscription:', err.message);
+				} else {
+					console.log('✅ Subscription recreated successfully');
+					subscription = newSubscription;
+					scheduleRenewal();
+				}
+			}
+		);
+	}
+}
+
 // Simple XML parser for ONVIF events
 function parseEventXMLManually(xmlBody) {
 	console.log('📡 RAW EVENT XML RECEIVED:');
@@ -254,8 +310,15 @@ new Cam({
 					{
 						url: receveUrl
 					},
-					(err, subscription, xml) => {
-						console.log('Subscribed to events')
+					(err, subscriptionResponse, xml) => {
+						if (err) {
+							console.log('❌ Failed to create subscription:', err.message);
+						} else {
+							console.log('✅ Subscribed to events');
+							subscription = subscriptionResponse;
+							// Start the renewal schedule
+							scheduleRenewal();
+						}
 					}
 				);
 
@@ -279,6 +342,53 @@ new Cam({
 // Code completes here but the applications remains running as there is a OnEvent listener that is active
 
 // UNCOMMENT THIS LINE TO STOP AFTER 5 SECONDS...   setTimeout(()=>{cam_obj.removeAllListeners('event');},5000);
+
+// Cleanup function
+function cleanup() {
+	console.log('\n🧹 Cleaning up...');
+	
+	// Clear renewal timer
+	if (renewalTimer) {
+		clearTimeout(renewalTimer);
+		renewalTimer = null;
+		console.log('⏰ Renewal timer cleared');
+	}
+	
+	// Unsubscribe from events
+	if (cam_obj && subscription) {
+		cam_obj.unsubscribe(function(err) {
+			if (err) {
+				console.log('⚠️ Error during unsubscribe:', err.message);
+			} else {
+				console.log('✅ Successfully unsubscribed from events');
+			}
+			
+			// Close HTTP server
+			if (server) {
+				server.close(() => {
+					console.log('🚪 HTTP server closed');
+					process.exit(0);
+				});
+			} else {
+				process.exit(0);
+			}
+		});
+	} else {
+		// Close HTTP server
+		if (server) {
+			server.close(() => {
+				console.log('🚪 HTTP server closed');
+				process.exit(0);
+			});
+		} else {
+			process.exit(0);
+		}
+	}
+}
+
+// Handle process termination gracefully
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
 
 
 

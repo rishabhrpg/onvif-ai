@@ -45,6 +45,13 @@ export interface EventServiceConfig {
       endpoint: string;
     };
   };
+  subscription: {
+    renewalEnabled: boolean;
+    renewalIntervalMs: number;
+    maxRenewalRetries: number;
+    renewalTimeoutMs: number;
+    alertOnFailure: boolean;
+  };
   logger: Logger;
 }
 
@@ -68,6 +75,11 @@ export class EventService extends EventEmitter {
   private eventCounter = 0;
   private retryCount = 0;
   private subscriptionActive = false;
+  
+  // Subscription renewal properties
+  private renewalTimer: NodeJS.Timeout | null = null;
+  private renewalRetryCount = 0;
+  private subscriptionCreatedAt: Date | null = null;
 
   constructor(onvifService: ONVIFService, config: EventServiceConfig) {
     super();
@@ -118,8 +130,17 @@ export class EventService extends EventEmitter {
     const notificationEndpoint = `http://${this.config.push.httpServer.host}:${this.config.push.httpServer.port}/events/${uniqueId}`;
     await this.onvifService.createEventSubscription(notificationEndpoint);
     
+    this.subscriptionActive = true;
+    this.subscriptionCreatedAt = new Date();
+    
+    // Start subscription renewal if enabled
+    if (this.config.subscription.renewalEnabled) {
+      this.startSubscriptionRenewal();
+    }
+    
     this.logger.info('Push notifications configured', {
-      endpoint: notificationEndpoint
+      endpoint: notificationEndpoint,
+      renewalEnabled: this.config.subscription.renewalEnabled
     });
   }
 
@@ -453,6 +474,157 @@ export class EventService extends EventEmitter {
   }
 
   /**
+   * Start subscription renewal timer
+   */
+  private startSubscriptionRenewal(): void {
+    if (!this.config.subscription.renewalEnabled) {
+      return;
+    }
+
+    // Clear any existing timer
+    this.stopSubscriptionRenewal();
+
+    this.renewalTimer = setTimeout(async () => {
+      await this.renewSubscription();
+    }, this.config.subscription.renewalIntervalMs);
+
+    this.logger.info('🔄 Subscription renewal scheduled', {
+      intervalMs: this.config.subscription.renewalIntervalMs,
+      nextRenewalAt: new Date(Date.now() + this.config.subscription.renewalIntervalMs).toISOString()
+    });
+  }
+
+  /**
+   * Stop subscription renewal timer
+   */
+  private stopSubscriptionRenewal(): void {
+    if (this.renewalTimer) {
+      clearTimeout(this.renewalTimer);
+      this.renewalTimer = null;
+      this.logger.debug('Subscription renewal timer stopped');
+    }
+  }
+
+  /**
+   * Renew subscription with retry logic
+   */
+  private async renewSubscription(): Promise<void> {
+    if (!this.subscriptionActive || !this.isRunning) {
+      this.logger.debug('Skipping renewal - subscription not active or service not running');
+      return;
+    }
+
+    try {
+      this.logger.info('🔄 Renewing subscription...');
+      
+      // Set timeout for renewal operation
+      const renewalPromise = this.onvifService.renewEventSubscription();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Renewal timeout')), this.config.subscription.renewalTimeoutMs);
+      });
+
+      await Promise.race([renewalPromise, timeoutPromise]);
+
+      // Reset retry count on success
+      this.renewalRetryCount = 0;
+      
+      this.logger.success('✅ Subscription renewed successfully');
+      
+      // Schedule next renewal
+      this.startSubscriptionRenewal();
+
+      // Emit renewal success event
+      this.emit('subscriptionRenewed', {
+        timestamp: new Date(),
+        retryCount: this.renewalRetryCount
+      });
+
+    } catch (error) {
+      this.renewalRetryCount++;
+      
+      this.logger.error(`❌ Subscription renewal failed (attempt ${this.renewalRetryCount}/${this.config.subscription.maxRenewalRetries})`, error);
+
+      if (this.renewalRetryCount >= this.config.subscription.maxRenewalRetries) {
+        // Max retries reached - emit failure event and try to recreate subscription
+        this.logger.error('🚨 Max renewal retries reached, attempting to recreate subscription');
+        
+        this.emit('subscriptionRenewalFailed', {
+          timestamp: new Date(),
+          error: error,
+          retryCount: this.renewalRetryCount,
+          maxRetries: this.config.subscription.maxRenewalRetries
+        });
+
+        // Try to recreate subscription
+        await this.recreateSubscription();
+      } else {
+        // Retry renewal after a short delay
+        setTimeout(async () => {
+          await this.renewSubscription();
+        }, 5000); // 5 second delay before retry
+      }
+    }
+  }
+
+  /**
+   * Recreate subscription when renewal fails
+   */
+  private async recreateSubscription(): Promise<void> {
+    try {
+      this.logger.info('🔄 Recreating subscription...');
+      
+      // First unsubscribe from the old subscription
+      try {
+        await this.onvifService.unsubscribeFromEvents();
+      } catch (error) {
+        this.logger.warning('Error during unsubscribe before recreate', error);
+      }
+
+      // Wait a moment before recreating
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      if (this.config.method === 'push' && this.config.push) {
+        // Recreate push subscription
+        const uniqueId = Date.now();
+        const notificationEndpoint = `http://${this.config.push.httpServer.host}:${this.config.push.httpServer.port}/events/${uniqueId}`;
+        await this.onvifService.createEventSubscription(notificationEndpoint);
+        
+        this.subscriptionActive = true;
+        this.subscriptionCreatedAt = new Date();
+        this.renewalRetryCount = 0;
+        
+        // Restart renewal timer
+        if (this.config.subscription.renewalEnabled) {
+          this.startSubscriptionRenewal();
+        }
+        
+        this.logger.success('✅ Subscription recreated successfully');
+        
+        this.emit('subscriptionRecreated', {
+          timestamp: new Date(),
+          endpoint: notificationEndpoint
+        });
+        
+      } else {
+        // Recreate polling subscription
+        await this.createPullPointSubscription();
+        this.renewalRetryCount = 0;
+        
+        this.logger.success('✅ Pull-point subscription recreated successfully');
+      }
+
+    } catch (error) {
+      this.logger.error('❌ Failed to recreate subscription', error);
+      this.subscriptionActive = false;
+      
+      this.emit('subscriptionRecreationFailed', {
+        timestamp: new Date(),
+        error: error
+      });
+    }
+  }
+
+  /**
    * Stop event monitoring
    */
   async stop(): Promise<void> {
@@ -470,6 +642,9 @@ export class EventService extends EventEmitter {
    * Cleanup resources
    */
   private async cleanup(): Promise<void> {
+    // Stop renewal timer
+    this.stopSubscriptionRenewal();
+    
     // Stop polling timer
     if (this.pullTimer) {
       clearInterval(this.pullTimer);

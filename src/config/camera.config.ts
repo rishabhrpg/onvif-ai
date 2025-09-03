@@ -52,6 +52,13 @@ export interface AppConfig {
         endpoint: string;
       };
     };
+    subscription: {
+      renewalEnabled: boolean;
+      renewalIntervalMs: number;
+      maxRenewalRetries: number;
+      renewalTimeoutMs: number;
+      alertOnFailure: boolean;
+    };
   };
   alerts: {
     enabled: boolean;
@@ -115,6 +122,13 @@ const defaultConfig: AppConfig = {
         host: getEnvVar('PUSH_HTTP_HOST', '192.168.1.100'),
         endpoint: getEnvVar('PUSH_HTTP_ENDPOINT', '/events'),
       },
+    },
+    subscription: {
+      renewalEnabled: getEnvBoolean('SUBSCRIPTION_RENEWAL_ENABLED', true),
+      renewalIntervalMs: getEnvNumber('SUBSCRIPTION_RENEWAL_INTERVAL_MS', 90000), // 90 seconds (30s before 2min timeout)
+      maxRenewalRetries: getEnvNumber('SUBSCRIPTION_MAX_RENEWAL_RETRIES', 3),
+      renewalTimeoutMs: getEnvNumber('SUBSCRIPTION_RENEWAL_TIMEOUT_MS', 10000), // 10 seconds
+      alertOnFailure: getEnvBoolean('SUBSCRIPTION_ALERT_ON_RENEWAL_FAILURE', true),
     },
   },
   alerts: {

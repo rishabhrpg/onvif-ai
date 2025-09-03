@@ -75,5 +75,6 @@ declare module 'onvif' {
       url: string;
     }, callback: (err: Error | null, subscription?: SubscriptionResponse) => void): void;
     unsubscribe(callback: (err: Error | null) => void): void;
+    renew(options: {}, callback: (err: Error | null, data?: any) => void): void;
   }
 }

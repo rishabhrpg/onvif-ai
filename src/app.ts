@@ -52,6 +52,7 @@ export class ONVIFApp {
       method: config.events.method,
       polling: config.events.polling,
       push: config.events.push,
+      subscription: config.events.subscription,
       logger: this.logger,
     });
 
@@ -279,6 +280,42 @@ export class ONVIFApp {
 
     this.eventService.onError((error: Error) => {
       this.logger.error('Event service error:', error);
+    });
+
+    // Handle subscription renewal events
+    this.eventService.on('subscriptionRenewalFailed', async (failureData) => {
+      this.logger.error('🚨 Subscription renewal failed - sending alert', failureData);
+      
+      if (this.alertService && this.config.events.subscription.alertOnFailure) {
+        try {
+          // Get camera info for the alert
+          const deviceInfo = await this.onvifService.getDeviceInformation().catch(() => null);
+          const cameraInfo = {
+            hostname: this.config.camera.hostname,
+            model: deviceInfo?.model,
+            manufacturer: deviceInfo?.manufacturer
+          };
+          
+          await this.alertService.sendSubscriptionRenewalFailureAlert(failureData, cameraInfo);
+        } catch (error) {
+          this.logger.error('Failed to send subscription renewal failure alert', error);
+        }
+      }
+    });
+
+    // Handle successful subscription renewal
+    this.eventService.on('subscriptionRenewed', (renewalData) => {
+      this.logger.success('✅ Subscription renewed successfully', renewalData);
+    });
+
+    // Handle subscription recreation
+    this.eventService.on('subscriptionRecreated', (recreationData) => {
+      this.logger.success('✅ Subscription recreated successfully', recreationData);
+    });
+
+    // Handle subscription recreation failure
+    this.eventService.on('subscriptionRecreationFailed', (failureData) => {
+      this.logger.error('❌ Subscription recreation failed', failureData);
     });
   }
 

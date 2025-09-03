@@ -216,6 +216,28 @@ export class ONVIFService {
   }
 
   /**
+   * Renew event subscription
+   */
+  async renewEventSubscription(): Promise<any> {
+    this.ensureConnected();
+
+    if (!this.subscription) {
+      throw new Error('No active event subscription to renew');
+    }
+
+    try {
+      const renewAsync = promisify(this.camera!.renew.bind(this.camera!));
+      const renewalData = await renewAsync({});
+      
+      this.logger.success('Event subscription renewed successfully');
+      return renewalData;
+    } catch (error) {
+      this.logger.error('Failed to renew event subscription', error);
+      throw error;
+    }
+  }
+
+  /**
    * Unsubscribe from events
    */
   async unsubscribeFromEvents(): Promise<void> {

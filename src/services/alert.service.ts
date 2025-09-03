@@ -103,6 +103,64 @@ export class AlertService extends EventEmitter {
   }
 
   /**
+   * Send alert for subscription renewal failure
+   */
+  async sendSubscriptionRenewalFailureAlert(failureData: {
+    timestamp: Date;
+    error: Error;
+    retryCount: number;
+    maxRetries: number;
+  }, cameraInfo?: any): Promise<void> {
+    if (!this.isEnabled) {
+      this.logger.debug('Alert service is disabled, skipping renewal failure alert');
+      return;
+    }
+
+    if (!this.config.webhookUrl) {
+      this.logger.warning('No webhook URL configured, skipping renewal failure alert');
+      return;
+    }
+
+    try {
+      const alertPayload: AlertPayload = {
+        eventId: `renewal-failure-${Date.now()}`,
+        eventType: 'subscription_renewal_failure',
+        timestamp: failureData.timestamp.toISOString(),
+        topic: 'system/subscription/renewal',
+        source: 'event-service',
+        data: {
+          error: failureData.error.message,
+          retryCount: failureData.retryCount,
+          maxRetries: failureData.maxRetries
+        },
+        cameraInfo: cameraInfo ? {
+          hostname: cameraInfo.hostname,
+          model: cameraInfo.model,
+          manufacturer: cameraInfo.manufacturer
+        } : undefined,
+        severity: 'critical',
+        message: `🚨 Subscription renewal failed after ${failureData.retryCount} attempts: ${failureData.error.message}`
+      };
+
+      await this.sendWebhook(alertPayload);
+      
+      this.alertCounter++;
+      this.logger.info(`📨 Subscription renewal failure alert sent`, {
+        eventId: alertPayload.eventId,
+        webhookUrl: this.maskUrl(this.config.webhookUrl),
+        alertCount: this.alertCounter
+      });
+
+      // Emit alert sent event
+      this.emit('alertSent', { event: failureData, payload: alertPayload });
+
+    } catch (error) {
+      this.logger.error('Failed to send subscription renewal failure alert', error);
+      this.emit('alertFailed', { event: failureData, error });
+    }
+  }
+
+  /**
    * Send alert for a processed event with throttling
    */
   async sendAlert(event: ProcessedEvent, cameraInfo?: any): Promise<void> {
